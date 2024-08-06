@@ -36,7 +36,7 @@ const NavBar = () => {
                     className='absolute w-full z-50 right-0 top-12 bg-black-Darker bg-opacity-50 backdrop-blur-lg flex flex-col items-center py-5 gap-[20px]'>
                     <ol className='w-full flex flex-col text-title2 font-semibold'>
                       <Link to={'/'} className='w-full p-5 gradient-border-bottom'>Home</Link>
-                      <Link to={'/inbox'} className='w-full p-5 gradient-border-bottom'>Locations</Link>
+                      <Link to={'/map'} className='w-full p-5 gradient-border-bottom'>Map</Link>
                       <li className='w-full p-5 gradient-border-bottom'>Customers</li>
                       <li className='w-full p-5 gradient-border-bottom'>Resources</li>
                     </ol>
@@ -52,7 +52,7 @@ const NavBar = () => {
             {/* PC NAVBAR */}
             <ol className='flex items-center gap-[50px] text-title2 font-semibold'>
               <motion.li whileHover={{scale:1.1}}><Link to={'/'}>Home</Link> </motion.li>
-              <motion.li whileHover={{scale:1.1}}><Link to={'/inbox'}>Locations</Link></motion.li>
+              <motion.li whileHover={{scale:1.1}}><Link to={'/map'}>Map</Link></motion.li>
               <motion.li whileHover={{scale:1.1}}>Customers</motion.li>
               <motion.li whileHover={{scale:1.1}}>Resources</motion.li>
             </ol>

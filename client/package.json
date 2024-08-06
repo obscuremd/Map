@@ -22,9 +22,11 @@
     "framer-motion": "^11.3.2",
     "iconoir-react": "^7.7.0",
     "ldrs": "^1.0.2",
+    "mapbox-gl": "^3.5.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",
+    "react-map-gl": "^7.1.7",
     "react-router-dom": "^6.24.1",
     "recoil": "^0.7.7",
     "use-react-countries": "^2.0.1"
