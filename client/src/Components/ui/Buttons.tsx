@@ -53,7 +53,7 @@ export const CircleIconButtons:React.FC<Props> = ({func, icon, to, square, text}
       <motion.button
         onClick={func}
         whileHover={hover}
-        className={`${square?'px-4 py-2 rounded-lg':'p-[5px] rounded-full'} border-[1px] border-pink-Light  text-pink-Light  text-caption`}>
+        className={`${square?'px-4 py-2 rounded-lg':'p-[5px] rounded-full'} border-[1px] border-pink-Light  text-pink-Light  text-caption flex items-center justify-center`}>
           <a href={to}>
               {icon}
           </a>
