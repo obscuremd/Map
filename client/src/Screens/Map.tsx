@@ -4,8 +4,9 @@ import { CircleIconButtons } from '../Components/ui/Buttons'
 import { fetchCoordinates } from '../hooks/fetchCordinates'
 import { SetStateAction, useEffect, useState } from 'react'
 import io, { Socket } from 'socket.io-client'
+import toast from 'react-hot-toast'
 
-const socket: Socket = io('http://localhost:8800');
+const socket: Socket = io('https://map-trjx.onrender.com');
 
 console.log(socket)
 
@@ -34,6 +35,7 @@ const Map = () => {
       const joinRoom = () =>{
         if(room !== ""){
           socket.emit("joinRoom",room)
+          toast.success('connection established')
         }
       }
 
@@ -54,7 +56,7 @@ const Map = () => {
 
   return (
     <div className='flex flex-col justify-center items-center gap-5'>
-        <div className='flex flex-col w-full justify-center gap-[20%] px-10'>
+        <div className='flex flex-col items-center w-full justify-center gap-[20%] px-10'>
             {/* Current Location */}
             <div>
               <p className='text-title2 font-semibold'>Key</p>
@@ -71,7 +73,7 @@ const Map = () => {
               </div>
             </div>
             
-            <p>{to?.data}</p>
+            <p className='pt-5'>{to?.data}</p>
         </div>
         <CustomMap user1={currentCord} user2={to?.cord || [0, 0]} />
     </div>
