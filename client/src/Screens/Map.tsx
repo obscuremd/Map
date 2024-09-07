@@ -1,81 +1,106 @@
-import { SendDiagonal } from 'iconoir-react'
-import CustomMap from '../Components/CustomMap'
-import { CircleIconButtons } from '../Components/ui/Buttons'
-import { fetchCoordinates } from '../hooks/fetchCordinates'
-import { SetStateAction, useEffect, useState } from 'react'
-import io, { Socket } from 'socket.io-client'
-import toast from 'react-hot-toast'
 
-const socket: Socket = io('https://map-trjx.onrender.com');
+import { useJsApiLoader ,GoogleMap, Marker, Autocomplete, DirectionsRenderer} from '@react-google-maps/api'
+import { Buttons } from "../Components/ui/Buttons"
+import Loader from '../Screens/Loader'
+import { MapPin } from "iconoir-react"
+import { useEffect, useRef, useState } from "react"
 
-console.log(socket)
+const Map =()=>{
 
-interface MessageData {
-  data: string;
-  cord: [number, number];
-}
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [link, setLink] = useState('')
+  const [sharedLocation, setSharedLocation] = useState<{ lat: number; lng: number } | null>(null)
 
-const Map = () => {
+  const [map, setMap] = useState<google.maps.Map>()
+  const [directionResponse, setDirectionsResponse] = useState<google.maps.DirectionsResult | null>(null)
+  const [distance, setDistance] = useState('')
+  const [duration, setDuration] = useState('')
+
+  const origin = useRef<HTMLInputElement | null>(null)
+  const destination = useRef<HTMLInputElement | null>(null)
+  console.log(sharedLocation)
+
+  const getSharedLocation =()=>{
+    const params = new URLSearchParams(window.location.search);
+    const lat = parseFloat(params.get('lat') || '');
+    const lng = parseFloat(params.get('lng') || '');
+    
+    if (!isNaN(lat) && !isNaN(lng)) {
+      setSharedLocation({ lat, lng });
+    }
+  }
+
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        const { latitude, longitude } = position.coords;
+        setLocation({ lat: latitude, lng: longitude });
+        setLink(`${window.location.origin}/map?lat=${latitude}&lng=${longitude}`)
+      });
+    } else {
+      alert('Geolocation is not supported by this browser.');
+    }
+  };
+
+  const calculateRoute =async()=>{
+    if (!origin.current?.value || !destination.current?.value) {
+      alert('Please enter both origin and destination');
+      return;
+    }
+
+    const directionService = new google.maps.DirectionsService()
+    
+    const results = await directionService.route({
+      origin: origin.current?.value,
+      destination: destination.current?.value,
+      travelMode: google.maps.TravelMode.DRIVING
+    })
+
+    setDirectionsResponse(results)
+    setDistance(results.routes[0].legs[0].distance?.text || '')
+    setDuration(results.routes[0].legs[0].duration?.text || '')
+  }
+  
+  const {isLoaded} =  useJsApiLoader({ 
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries:['places', 'marker']
+  })
+  
+
+  useEffect(()=>{
+      getSharedLocation()
+      getUserLocation()
+  },[])
 
 
-      const [current, setCurrent] = useState('')
-      const [to, setTo] = useState<MessageData | null>(null);
-      const [room, setRoom] = useState('')
-      
-      const [currentCord, setCurrentCord] = useState<[number, number]>([3.393999,6.454811])
-
-      console.log(currentCord)
-
-      const getCurrent = async (e: { target: { value: SetStateAction<string> } }) => {
-        setCurrent(e.target.value)
-        const coordinates = await fetchCoordinates(current);
-        setCurrentCord(coordinates);
-      };
-
-      const joinRoom = () =>{
-        if(room !== ""){
-          socket.emit("joinRoom",room)
-          toast.success('connection established')
-        }
-      }
-
-      const sendMessage =async()=>{
-        socket.emit('sendMessage',{
-          data:current,
-          cord:currentCord,
-          room
-        })
-      }
-
-      useEffect(()=>{
-        socket.on('receiveMessage',(data)=>{
-          setTo(data)
-          console.log(data)
-        })
-      },[socket])
-
-  return (
-    <div className='flex flex-col justify-center items-center gap-5'>
-        <div className='flex flex-col items-center w-full justify-center gap-[20%] px-10'>
-            {/* Current Location */}
-            <div>
-              <p className='text-title2 font-semibold'>Key</p>
-              <div className='flex items-center gap-2'>
-                <input type="text" onChange={(e)=>setRoom(e.target.value)} />
-                <CircleIconButtons icon={<SendDiagonal/>} func={joinRoom}/>
-              </div>
-            </div>
-            <div>
-              <p className='text-title2 font-semibold'>Current</p>
-              <div className='flex items-center gap-2'>
-                <input type="text" onChange={getCurrent} />
-                <CircleIconButtons icon={<SendDiagonal/>} func={sendMessage}/>
-              </div>
-            </div>
-            
-            <p className='pt-5'>{to?.data}</p>
+  if(!isLoaded){
+    return <Loader/>
+  }
+  
+  if(!location){
+    return <Loader/>
+  }
+  return(
+    <div>
+        <div className="flex flex-col gap-5 pl-[3%] pr-[50%]">
+          <div className="flex gap-5 ">
+            <Autocomplete><input ref={origin}/></Autocomplete>
+            <Autocomplete><input ref={destination}/></Autocomplete>
+            <Buttons bg text="locate" func={calculateRoute}/>
+            <a href={link} target="_blank" rel="noopener noreferrer">
+              Shareable Link: {link}
+            </a>
+          </div>
+          <div className="flex items-center justify-between">
+            <p>ETA: {duration}</p>
+            <p>Distance: {distance}</p>
+            <Buttons border icon={<MapPin/>} func={()=>map?.panTo(location)}/>
+          </div>
         </div>
-        <CustomMap user1={currentCord} user2={to?.cord || [0, 0]} />
+        <GoogleMap center={location} zoom={15} mapContainerStyle={{width:"100%", height:"100vh"}} onLoad={map => setMap(map)}>
+          <Marker position={location} />
+          {directionResponse && <DirectionsRenderer directions={directionResponse}/>}
+        </GoogleMap>
     </div>
   )
 }
