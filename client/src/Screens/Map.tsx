@@ -82,7 +82,7 @@ const Map =()=>{
   }
   return(
     <div>
-        <div className="flex flex-col gap-5 pl-[3%] pr-[50%]">
+        <div className="flex flex-col gap-5 pl-[3%] pr-[30%]">
           <div className="flex gap-5 ">
             <Autocomplete><input ref={origin}/></Autocomplete>
             <Autocomplete><input ref={destination}/></Autocomplete>
