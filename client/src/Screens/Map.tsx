@@ -1,49 +1,68 @@
-
-import { useJsApiLoader ,GoogleMap, Marker, Autocomplete, DirectionsRenderer} from '@react-google-maps/api'
+import { useJsApiLoader, GoogleMap, Marker, Autocomplete, DirectionsRenderer } from '@react-google-maps/api'
 import { Buttons } from "../Components/ui/Buttons"
 import Loader from '../Screens/Loader'
-import { MapPin } from "iconoir-react"
+import { Forward, MapPin } from "iconoir-react"
 import { useEffect, useRef, useState } from "react"
+import { copyToClipboard, key } from '../hooks/CopyToClipBoard'
+import io, { Socket } from 'socket.io-client'
 
-const Map =()=>{
+const Map = () => {
+  const socket: Socket = io('http://localhost:8800'); // Ensure that the socket server is running
+ 
+  // chat functions -----------------------------------------------------------------------------------------------------------------------------------------
+  const origin = useRef<HTMLInputElement | null>(null)
+  const message = origin.current?.value
+  const [receiveMessage, setReceiveMessage] = useState('')
 
+  const [chatKey, setChatKey] = useState(key)
+
+  const sendMessage =async()=>{
+      if (chatKey !== "") {
+          alert(message)
+          console.log(message)
+          socket.emit("sendMessage", { message, chatKey }); // Send to the room with chatKey
+      }
+  }
+
+  useEffect(() => {
+      // Only join the room when chatKey exists
+      if (chatKey !== "") {
+          socket.emit("joinRoom", chatKey);
+      }
+  }, [chatKey]);
+
+
+    // Extract chatKey from URL when component mounts
+  useEffect(() => {
+      const getKey = () => {
+      const params = new URLSearchParams(window.location.search);
+      const newKey = params.get('chatKey');
+      if (newKey) {
+          setChatKey(newKey); // Set the chatKey from the URL
+          console.log("new key:"+newKey)
+      }
+      };
+      getKey();
+  }, []);
+
+  useEffect(()=>{
+      socket.on("receiveMessage",(data)=>{
+          console.log("receiveMessage:",data)
+          setReceiveMessage(data)
+      })
+  },[socket])
+
+
+  // location functions---------------------------------------------------------------------------------------------------------------------------------------
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const [link, setLink] = useState('')
-  const [sharedLocation, setSharedLocation] = useState<{ lat: number; lng: number } | null>(null)
-
   const [map, setMap] = useState<google.maps.Map>()
   const [directionResponse, setDirectionsResponse] = useState<google.maps.DirectionsResult | null>(null)
   const [distance, setDistance] = useState('')
   const [duration, setDuration] = useState('')
-
-  const origin = useRef<HTMLInputElement | null>(null)
-  const destination = useRef<HTMLInputElement | null>(null)
-  console.log(sharedLocation)
-
-  const getSharedLocation =()=>{
-    const params = new URLSearchParams(window.location.search);
-    const lat = parseFloat(params.get('lat') || '');
-    const lng = parseFloat(params.get('lng') || '');
-    
-    if (!isNaN(lat) && !isNaN(lng)) {
-      setSharedLocation({ lat, lng });
-    }
-  }
-
-  const getUserLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude, longitude } = position.coords;
-        setLocation({ lat: latitude, lng: longitude });
-        setLink(`${window.location.origin}/map?lat=${latitude}&lng=${longitude}`)
-      });
-    } else {
-      alert('Geolocation is not supported by this browser.');
-    }
-  };
-
-  const calculateRoute =async()=>{
-    if (!origin.current?.value || !destination.current?.value) {
+  const destination = receiveMessage
+  
+  const calculateRoute = async () => {
+    if (!origin.current?.value || !destination) {
       alert('Please enter both origin and destination');
       return;
     }
@@ -52,7 +71,7 @@ const Map =()=>{
     
     const results = await directionService.route({
       origin: origin.current?.value,
-      destination: destination.current?.value,
+      destination: destination,
       travelMode: google.maps.TravelMode.DRIVING
     })
 
@@ -60,47 +79,62 @@ const Map =()=>{
     setDistance(results.routes[0].legs[0].distance?.text || '')
     setDuration(results.routes[0].legs[0].duration?.text || '')
   }
-  
-  const {isLoaded} =  useJsApiLoader({ 
+
+  const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries:['places', 'marker']
+    libraries: ['places', 'marker']
   })
-  
 
-  useEffect(()=>{
-      getSharedLocation()
-      getUserLocation()
-  },[])
+  useEffect(() => {
+    const getUserLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({lat:latitude,lng:longitude});
+        });
+      } else {
+        alert('Geolocation is not supported by this browser.');
+      }
+    };
+    getUserLocation()
+  }, [])
+
+  // ------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-  if(!isLoaded){
-    return <Loader/>
+
+  if (!isLoaded) {
+    return <Loader />
   }
-  
-  if(!location){
-    return <Loader/>
+
+  if (!location) {
+    return <Loader />
   }
-  return(
+
+  return (
     <div>
-        <div className="flex flex-col gap-5 pl-[3%] pr-[30%]">
-          <div className="flex gap-5 ">
-            <Autocomplete><input ref={origin}/></Autocomplete>
-            <Autocomplete><input ref={destination}/></Autocomplete>
-            <Buttons bg text="locate" func={calculateRoute}/>
-            <a href={link} target="_blank" rel="noopener noreferrer">
-              Shareable Link: {link}
-            </a>
-          </div>
-          <div className="flex items-center justify-between">
-            <p>ETA: {duration}</p>
-            <p>Distance: {distance}</p>
-            <Buttons border icon={<MapPin/>} func={()=>map?.panTo(location)}/>
+      <div className="flex flex-col gap-5 pl-[3%] pr-[30%]">
+        <div className="flex gap-5 ">
+          <Autocomplete><input ref={origin} /></Autocomplete>
+          <Buttons border icon={<Forward />} func={sendMessage} />
+          <Buttons bg text="locate" func={calculateRoute} />
+          <Buttons bg text="Copy Link" func={() => copyToClipboard()} />
+
+          {/* Display sent and received messages */}
+          <div className="flex gap-2 items-center">
+            {receiveMessage && <p>Received: {receiveMessage}</p>}
           </div>
         </div>
-        <GoogleMap center={location} zoom={15} mapContainerStyle={{width:"100%", height:"100vh"}} onLoad={map => setMap(map)}>
-          <Marker position={location} />
-          {directionResponse && <DirectionsRenderer directions={directionResponse}/>}
-        </GoogleMap>
+        <div className="flex items-center justify-between">
+          <p>ETA: {duration}</p>
+          <p>Distance: {distance}</p>
+          <Buttons border icon={<MapPin />} func={() => map?.panTo(location)} />
+        </div>
+      </div>
+      <GoogleMap center={location} zoom={15} mapContainerStyle={{ width: "100%", height: "100vh" }} onLoad={map => setMap(map)}>
+        <Marker position={location} />
+        {directionResponse && <DirectionsRenderer directions={directionResponse} />}
+      </GoogleMap>
     </div>
   )
 }
