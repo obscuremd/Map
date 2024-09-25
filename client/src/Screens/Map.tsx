@@ -4,19 +4,20 @@ import Loader from '../Screens/Loader'
 import { Forward, MapPin } from "iconoir-react"
 import { useEffect, useRef, useState } from "react"
 import { copyToClipboard, key } from '../hooks/CopyToClipBoard'
-import io, { Socket } from 'socket.io-client'
+import io from 'socket.io-client'
 
 const Map = () => {
-  const socket: Socket = io('http://localhost:8800'); // Ensure that the socket server is running
+  const socket = io('http://localhost:8800'); // Ensure that the socket server is running
  
   // chat functions -----------------------------------------------------------------------------------------------------------------------------------------
   const origin = useRef<HTMLInputElement | null>(null)
-  const message = origin.current?.value
+  
   const [receiveMessage, setReceiveMessage] = useState('')
 
   const [chatKey, setChatKey] = useState(key)
 
   const sendMessage =async()=>{
+    const message = origin.current?.value
       if (chatKey !== "") {
           alert(message)
           console.log(message)
@@ -122,7 +123,7 @@ const Map = () => {
 
           {/* Display sent and received messages */}
           <div className="flex gap-2 items-center">
-            {receiveMessage && <p>Received: {receiveMessage}</p>}
+            {receiveMessage ? <p>Received: {receiveMessage}</p> : <p>waiting for Destination ...</p>}
           </div>
         </div>
         <div className="flex items-center justify-between">
